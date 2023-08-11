@@ -1,0 +1,172 @@
+//Ernesto Chavez 21441
+
+
+#include <Arduino.h>
+#include <ESP32Servo.h>
+#include "driver/ledc.h"
+
+
+Servo myservo;
+
+
+// Configuración del PWM
+#define pwmChannel 0
+#define ledRChannel 1
+#define ledGChannel 2
+#define ledYChannel 3
+
+
+#define freqPWM 5000
+#define freqPWM1 1000
+#define freqPWM2 500
+#define resolution 8
+
+
+// Pines de los LEDs
+#define pinLedR 22
+#define pinLedG 1
+#define pinLedY 3
+#define pinPWM 15
+
+
+// Configuración del servo
+int servoPin = 23;
+int Ogrados = 500;
+int MedioGrados = 1450;  
+int Fullgrados = 2400;
+
+
+// Pines de los botones
+int B1Pin = 12;
+int B2Pin = 14;
+int B3Pin = 26;    
+int B4Pin = 25;
+
+
+// estados de los botones B3 y B4
+int botiB3 = LOW, botpB3 = LOW;
+int botiB4 = LOW, botpB4 = LOW;
+
+
+//estados de las luces LED y del modo servo para control libre
+typedef enum {
+    STATE_GREEN,
+    STATE_BLUE,
+    STATE_RED,
+    STATE_MANUAL
+} ServoState;
+
+
+//Estado inicial de las luces LED
+ServoState currentState = STATE_GREEN;
+
+
+//Configuración para cambiar el brillo de las luces LED
+int brillo = 0;
+int subirbrillo = 10;
+
+
+//Configuración del PWM para los distintos componentes
+void configurarPWM() {
+    ledcSetup(pwmChannel, freqPWM, resolution);
+    ledcSetup(ledRChannel, freqPWM1, resolution);
+    ledcSetup(ledGChannel, freqPWM2, resolution);
+    ledcSetup(ledYChannel, freqPWM, resolution);
+
+
+    ledcAttachPin(pinPWM, pwmChannel);
+    ledcAttachPin(pinLedR, ledRChannel);
+    ledcAttachPin(pinLedG, ledGChannel);
+    ledcAttachPin(pinLedY, ledYChannel);
+}
+
+
+//Declaración de los botones como input con resistencias pullup
+void setup() {
+    pinMode(B1Pin, INPUT_PULLUP);
+    pinMode(B2Pin, INPUT_PULLUP);
+    pinMode(B3Pin, INPUT_PULLUP);
+    pinMode(B4Pin, INPUT_PULLUP);
+    configurarPWM();
+
+
+    //Setup del servo
+    myservo.attach(servoPin, Ogrados, Fullgrados);
+}
+
+
+//Loop principal del programa.
+//Acá se realizan todas las funciones con los botones con un switch case.
+void loop() {
+    botiB3 = digitalRead(B3Pin);
+    if (botiB3 == LOW && botpB3 == HIGH) {
+        switch (currentState) {
+            case STATE_GREEN:
+                myservo.writeMicroseconds(MedioGrados);
+                ledcWrite(ledYChannel, 255);
+                ledcWrite(ledGChannel, 0);
+                ledcWrite(ledRChannel, 0);
+                currentState = STATE_BLUE;
+                break;
+            case STATE_BLUE:
+                myservo.writeMicroseconds(Fullgrados);
+                ledcWrite(ledRChannel, 255);
+                ledcWrite(ledGChannel, 0);
+                ledcWrite(ledYChannel, 0);
+                currentState = STATE_RED;
+                break;
+            case STATE_RED:
+                ledcWrite(ledRChannel, 0);
+                ledcWrite(ledGChannel, 0);
+                ledcWrite(ledYChannel, 0);
+                currentState = STATE_MANUAL;
+                break;
+            case STATE_MANUAL:
+                myservo.writeMicroseconds(Ogrados);
+                ledcWrite(ledGChannel, 255);
+                ledcWrite(ledRChannel, 0);
+                ledcWrite(ledYChannel, 0);
+                currentState = STATE_GREEN;
+                break;
+        }
+    }
+    botpB3 = botiB3;
+
+
+    botiB4 = digitalRead(B4Pin);
+    if (botiB4 == LOW && botpB4 == HIGH) {
+        brillo = (brillo + subirbrillo) % 256;
+
+
+        switch (currentState) {
+            case STATE_GREEN:
+                ledcWrite(ledGChannel, brillo);
+                break;
+            case STATE_BLUE:
+                ledcWrite(ledYChannel, brillo);
+                break;
+            case STATE_RED:
+                ledcWrite(ledRChannel, brillo);
+                break;
+            case STATE_MANUAL:
+                ledcWrite(ledGChannel, brillo);
+                ledcWrite(ledRChannel, brillo);
+                ledcWrite(ledYChannel, brillo);
+                break;
+        }
+    }
+    botpB4 = botiB4;
+
+
+    if (currentState == STATE_MANUAL) {
+        if (digitalRead(B1Pin) == LOW) {
+            myservo.writeMicroseconds(Fullgrados);
+        }
+        if (digitalRead(B2Pin) == LOW) {
+            myservo.writeMicroseconds(Ogrados);
+        }
+    }
+    delay(50); //antirebote
+}
+
+
