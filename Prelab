@@ -1,0 +1,45 @@
+//Ernesto Chavez - 21441
+#include <ESP32Servo.h>
+
+
+Servo myservo;  // Crea un objeto servo para controlar un servo
+
+
+
+
+int servoPin = 23;      // Pin de GPIO/PWM usado para conectar el control del servo
+int buttonPin1 = 12;    // Pin de GPIO para el primer botón
+int buttonPin2 = 14;    // Pin de GPIO para el segundo botón
+
+
+// Valores del ciclo de trabajo correspondientes a 0 y 180 grados
+int Ogrados = 500;   // Ciclo de trabajo correspondiente a 0 grados
+int Fullgrados = 2400; // Ciclo de trabajo correspondiente a 180 grados
+ 
+void setup()
+{
+  // Permitir la asignación de todos los temporizadores
+  ESP32PWM::allocateTimer(0);
+  ESP32PWM::allocateTimer(1);
+  ESP32PWM::allocateTimer(2);
+  ESP32PWM::allocateTimer(3);
+  myservo.setPeriodHertz(50); // Servo estándar de 50hz
+  myservo.attach(servoPin, Ogrados, Fullgrados); // Conecta el servo en el pin 23
+
+
+  pinMode(buttonPin1, INPUT_PULLUP); // Configura el primer botón como entrada
+  pinMode(buttonPin2, INPUT_PULLUP); // Configura el segundo botón como entrada
+}
+ 
+void loop() {
+  if(digitalRead(buttonPin1) == LOW) {   // Si el primer botón es presionado
+    myservo.writeMicroseconds(Fullgrados); // Configura el ancho de pulso para 180 grados
+    delay(200);
+  }
+  if(digitalRead(buttonPin2) == LOW) {   // Si el segundo botón es presionado
+    myservo.writeMicroseconds(Ogrados); // Configura el ancho de pulso para 0 grados
+    delay(200);
+  }
+}
+
+
