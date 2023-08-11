@@ -1,0 +1,122 @@
+#include <Arduino.h>
+#include "driver/ledc.h"
+
+
+#define pwmChannel 0 // 16 canales 0-15
+
+
+#define ledRChannel 1
+#define ledGChannel 2
+#define ledYChannel 3
+
+
+#define freqPWM 5000 // Frecuencia en Hz
+#define freqPWM1 1000 // Frecuencia en Hz
+#define freqPWM2 500 // Frecuencia en Hz
+
+
+#define resolution 8 // 1-16 bits de resolución
+
+
+#define pinLedR 23
+#define pinLedG 22
+#define pinLedY 21
+
+
+#define pinPWM 15
+
+
+int B3Pin1 = 12;    // Pin de GPIO para el primer botón
+int B4Pin2 = 14;    // Pin de GPIO para el segundo botón
+
+
+int boti = LOW;     // Estado actual del botón B3
+int botp = LOW; // Estado previo del botón B3
+int boti2 = LOW;     // Estado actual del botón B4
+int botp2 = LOW; // Estado previo del botón B4
+
+
+typedef enum {
+  RED_LED,
+  GREEN_LED,
+  BLUE_LED
+}
+LedState;
+
+
+LedState ledact = RED_LED;
+int brillo = 0;
+int subirbrillo = 10; // El brillo se incrementará en 10 unidades cada vez
+
+
+void configurarPWM(void)
+{
+  // Paso 1: Configurar el módulo PWM
+  ledcSetup(pwmChannel, freqPWM, resolution);
+  ledcSetup(ledRChannel, freqPWM1, resolution);
+  ledcSetup(ledGChannel, freqPWM2, resolution);
+  ledcSetup(ledYChannel, freqPWM, resolution);
+
+
+  // Paso 2: seleccionar en que GPIO tendremos nuestra señal PWM
+  ledcAttachPin(pinPWM, pwmChannel);
+  ledcAttachPin(pinLedR, ledRChannel);
+  ledcAttachPin(pinLedG, ledGChannel);
+  ledcAttachPin(pinLedY, ledYChannel);
+}
+
+
+void setup()
+{
+  pinMode(B3Pin1, INPUT_PULLUP);
+  pinMode(B4Pin2, INPUT_PULLUP);
+  configurarPWM();
+}
+
+
+void loop()
+{
+  // Comprobar el botón B3
+  boti = digitalRead(B3Pin1);
+  if (boti == LOW && botp == HIGH) {
+    switch (ledact) {
+      case RED_LED:
+        ledact = GREEN_LED;
+        break;
+      case GREEN_LED:
+        ledact = BLUE_LED;
+        break;
+      case BLUE_LED:
+        ledact = RED_LED;
+        break;
+    }
+  }
+  botp = boti;
+ 
+  // Comprobar el botón B4
+  boti2 = digitalRead(B4Pin2);
+  if (boti2 == LOW && botp2 == HIGH) {
+    brillo += subirbrillo;
+    if (brillo > 255) {
+      brillo = 0;
+    }
+    switch (ledact) {
+      case RED_LED:
+        ledcWrite(ledRChannel, brillo);
+        break;
+      case GREEN_LED:
+        ledcWrite(ledGChannel, brillo);
+        break;
+      case BLUE_LED:
+        ledcWrite(ledYChannel, brillo);
+        break;
+    }
+  }
+  botp2 = boti2;
+ 
+  delay(50); // antirebote
+}
+
+
+
+
